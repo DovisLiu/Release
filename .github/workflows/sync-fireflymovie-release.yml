@@ -1,0 +1,45 @@
+name: Sync APK to FireflyMovie Release
+
+# 单一真相源方案（A 方案）：Release 仓库的 apk/ 是唯一真相源。
+# 每次把新 APK 推到本仓库（fireflymovie 分支）即触发本工作流，
+# 自动把 4 个 APK 挂到 GitHub 的 DovisLiu/FireflyMovie 发行版（跨仓库写，需 FIREFLY_PAT）。
+# Gitee 一侧由镜像推送 + Gitee Release 仓的 Gitee Go 自动完成，无需此处处理。
+on:
+  push:
+    paths:
+      - 'apk/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync-github:
+    name: 挂 APK 到 GitHub FireflyMovie 发行版
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 从 apk/ 派发 FireflyMovie 发行版附件
+        env:
+          GH_TOKEN: ${{ secrets.FIREFLY_PAT }}
+        run: |
+          set -e
+          NAME=$(python3 -c "import json;print(json.load(open('apk/leanback.json'))['name'])")
+          TAG="v$NAME"
+          echo "发布版本: $NAME -> 发行版 tag $TAG"
+          APKS=(leanback-arm64_v8a.apk leanback-armeabi_v7a.apk mobile-arm64_v8a.apk mobile-armeabi_v7a.apk)
+
+          if gh release view "$TAG" --repo DovisLiu/FireflyMovie >/dev/null 2>&1; then
+            echo "发行版 $TAG 已存在，追加/覆盖附件"
+            for f in "${APKS[@]}"; do
+              gh release upload "$TAG" "apk/$f" --repo DovisLiu/FireflyMovie --clobber
+            done
+          else
+            echo "创建发行版 $TAG 并上传附件"
+            gh release create "$TAG" --repo DovisLiu/FireflyMovie \
+              --title "$TAG" --notes "流萤影视 $TAG 发布" --target main \
+              "${APKS[@]/#/apk/}"
+          fi
+          echo "GitHub 侧完成。"

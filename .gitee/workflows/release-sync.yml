@@ -1,0 +1,63 @@
+name: Sync Release to Gitee FireflyMovie
+
+# 单一真相源方案（A 方案）的 Gitee 侧：
+# 本工作流随 Release 仓库镜像到 Gitee 的 dovisliu/Release 仓库，
+# 由 Gitee Go 在 push（镜像推送）时触发。脚本从 Gitee 自己的 Release 仓库 apk/
+# 拉 4 个 APK（同云内、不跨境），挂到 Gitee 的 dovisliu/FireflyMovie 发行版。
+# 版本号从 apk/leanback.json 的 name 字段取，与 GitHub 侧同源，无竞态。
+on:
+  push:
+
+jobs:
+  sync-gitee:
+    name: 挂 APK 到 Gitee FireflyMovie 发行版
+    runs-on: ubuntu-latest
+    steps:
+      - name: 从本仓 apk/ 派发 Gitee FireflyMovie 发行版附件
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          set -e
+          OWNER=dovisliu
+          REPO=FireflyMovie
+          RELEASE_REPO=Release
+          TOKEN="$GITEE_TOKEN"
+          BRANCH=fireflymovie
+
+          NAME=$(curl -sSL "https://gitee.com/$OWNER/$RELEASE_REPO/raw/$BRANCH/apk/leanback.json?access_token=$TOKEN" \
+            | python3 -c "import sys,json;print(json.load(sys.stdin)['name'])")
+          [ -z "$NAME" ] && { echo "无法读取版本号"; exit 1; }
+          TAG="v$NAME"
+          echo "发布版本: $NAME -> 发行版 tag $TAG"
+
+          APKS=(leanback-arm64_v8a.apk leanback-armeabi_v7a.apk mobile-arm64_v8a.apk mobile-armeabi_v7a.apk)
+          mkdir -p _apks
+          for f in "${APKS[@]}"; do
+            echo "下载 $f ..."
+            curl -sSL --retry 3 --retry-delay 5 -o "_apks/$f" "https://gitee.com/$OWNER/$RELEASE_REPO/raw/$BRANCH/apk/$f?access_token=$TOKEN"
+            ls -lh "_apks/$f"
+          done
+
+          REL_ID=$(curl -sS "https://gitee.com/api/v5/repos/$OWNER/$REPO/releases/tags/$TAG?access_token=$TOKEN" | jq -r '.id // empty')
+          if [ -z "$REL_ID" ]; then
+            echo "创建 Gitee 发行版 $TAG"
+            REL_ID=$(curl -sS -X POST "https://gitee.com/api/v5/repos/$OWNER/$REPO/releases?access_token=$TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":\"流萤影视 $TAG 发布\",\"target_commitish\":\"main\",\"prerelease\":false}" \
+              | jq -r '.id // empty')
+          fi
+          [ -z "$REL_ID" ] && { echo "创建发行版失败"; exit 1; }
+          echo "Gitee 发行版 id: $REL_ID"
+
+          EXISTING=$(curl -sS "https://gitee.com/api/v5/repos/$OWNER/$REPO/releases/$REL_ID/attach_files?access_token=$TOKEN" | jq -r '.[].name' || true)
+          for f in "${APKS[@]}"; do
+            if echo "$EXISTING" | grep -qx "$f"; then
+              echo "已存在，跳过 $f"
+              continue
+            fi
+            echo "上传 $f ..."
+            curl -sSL --retry 3 --retry-delay 5 --max-time 600 -X POST "https://gitee.com/api/v5/repos/$OWNER/$REPO/releases/$REL_ID/attach_files?access_token=$TOKEN" \
+              -F "file=@_apks/$f"
+            echo "  -> done"
+          done
+          echo "Gitee 侧完成。"
