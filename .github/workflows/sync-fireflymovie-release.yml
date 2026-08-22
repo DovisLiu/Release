@@ -35,8 +35,8 @@ jobs:
           d = json.load(open('apk/leanback.json'))
           name = d['name']
           desc = d.get('desc', '')
-          gh_base = "https://github.com/DovisLiu/Release/raw/fireflymovie/apk"
-          ge_base = "https://gitee.com/dovisliu/Release/raw/fireflymovie/apk"
+          gh_base = f"https://github.com/DovisLiu/Release/raw/fireflymovie/apk/{name}"
+          ge_base = f"https://gitee.com/dovisliu/Release/raw/fireflymovie/apk/{name}"
           apks = [
               ("电视版 64 位", "leanback-arm64_v8a.apk"),
               ("电视版 32 位", "leanback-armeabi_v7a.apk"),
