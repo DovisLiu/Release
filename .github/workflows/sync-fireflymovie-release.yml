@@ -61,19 +61,15 @@ jobs:
           NAME=$(python3 -c "import json;print(json.load(open('apk/leanback.json'))['name'])")
           TAG="v$NAME"
           echo "GitHub 发行版 tag: $TAG"
-          if gh release view "$TAG" --repo DovisLiu/FireflyMovie >/dev/null 2>&1; then
-            echo "已存在，删除旧 APK 附件并改写为链接说明"
-            for fn in leanback-arm64_v8a.apk leanback-armeabi_v7a.apk mobile-arm64_v8a.apk mobile-armeabi_v7a.apk; do
-              AID=$(gh release view "$TAG" --repo DovisLiu/FireflyMovie --json assets --jq ".assets[] | select(.name==\"$fn\") | .id" 2>/dev/null || true)
-              if [ -n "$AID" ]; then
-                CODE=$(curl -s -o /tmp/del.json -w "%{http_code}" -X DELETE \
-                  -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-                  "https://api.github.com/repos/DovisLiu/FireflyMovie/releases/assets/$AID")
-                echo "  删除附件 $fn (id=$AID) -> HTTP $CODE"
-                if [ "$CODE" != "204" ] && [ "$CODE" != "200" ]; then
-                  echo "    ⚠️ 删除失败响应:"; head -c 300 /tmp/del.json; echo
-                fi
-              fi
+          REL=$(curl -s -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/DovisLiu/FireflyMovie/releases/tags/$TAG")
+          REL_ID=$(echo "$REL" | jq -r '.id // empty')
+          if [ -n "$REL_ID" ]; then
+            echo "已存在（release id=$REL_ID），删除旧 APK 附件并改写为链接说明"
+            echo "$REL" | jq -r '.assets[] | select(.name|test("apk$")) | .id' | while read -r AID; do
+              CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+                -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/DovisLiu/FireflyMovie/releases/assets/$AID")
+              echo "  删除附件 id=$AID -> HTTP $CODE"
             done
             gh release edit "$TAG" --repo DovisLiu/FireflyMovie --notes-file /tmp/gh_notes.md
           else
