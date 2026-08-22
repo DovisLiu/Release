@@ -1,9 +1,11 @@
-name: Sync APK to FireflyMovie Release
+name: Sync Release Notes to FireflyMovie
 
-# 单一真相源方案（A 方案）：Release 仓库的 apk/ 是唯一真相源。
-# 每次把新 APK 推到本仓库（fireflymovie 分支）即触发本工作流，
-# 自动把 4 个 APK 挂到 GitHub 的 DovisLiu/FireflyMovie 发行版（跨仓库写，需 FIREFLY_PAT）。
-# Gitee 一侧由镜像推送 + Gitee Release 仓的 Gitee Go 自动完成，无需此处处理。
+# 单一真相源方案（链接型）：Release 仓库的 apk/ 是唯一真相源。
+# 每次把新 APK 推到本仓库（fireflymovie 分支）即触发本工作流。
+# 不再上传 350MB 的 APK 附件（避免跨境传输），改为：
+#   - GitHub 侧：用 FIREFLY_PAT 更新 DovisLiu/FireflyMovie 发行版说明（仅含 github.com 绝对下载链接）
+#   - Gitee  侧：用 GITEE_TOKEN  更新 dovisliu/FireflyMovie 发行版说明（仅含 gitee.com  绝对下载链接）
+# 两侧链接各自指向自家 Release 仓库的 apk/ 目录，互不串台。
 on:
   push:
     paths:
@@ -14,32 +16,85 @@ permissions:
   contents: read
 
 jobs:
-  sync-github:
-    name: 挂 APK 到 GitHub FireflyMovie 发行版
+  sync:
+    name: 更新 GitHub / Gitee FireflyMovie 发行版（仅链接）
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.FIREFLY_PAT }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 从 apk/ 派发 FireflyMovie 发行版附件
-        env:
-          GH_TOKEN: ${{ secrets.FIREFLY_PAT }}
+      - name: 生成两侧发行说明
+        id: gen
+        run: |
+          set -e
+          python3 - <<'PY'
+          import json
+          d = json.load(open('apk/leanback.json'))
+          name = d['name']
+          desc = d.get('desc', '')
+          gh_base = "https://github.com/DovisLiu/Release/raw/fireflymovie/apk"
+          ge_base = "https://gitee.com/dovisliu/Release/raw/fireflymovie/apk"
+          apks = [
+              ("电视版 64 位", "leanback-arm64_v8a.apk"),
+              ("电视版 32 位", "leanback-armeabi_v7a.apk"),
+              ("手机版 64 位", "mobile-arm64_v8a.apk"),
+              ("手机版 32 位", "mobile-armeabi_v7a.apk"),
+          ]
+
+          def table(base):
+              rows = "\n".join(f"| {label} | [{fn}]({base}/{fn}) |" for label, fn in apks)
+              return f"| 版本 | 下载链接 |\n|------|----------|\n{rows}"
+
+          gh_notes = f"流萤影视 v{name}\n\n{desc}\n\n## 下载（GitHub 网络）\n\n{table(gh_base)}\n\n各链接指向 GitHub 的 Release 仓库，请直接点击下载。"
+          ge_notes = f"流萤影视 v{name}\n\n{desc}\n\n## 下载（Gitee 网络）\n\n{table(ge_base)}\n\n各链接指向 Gitee 的 Release 仓库，请直接点击下载。"
+          open('/tmp/gh_notes.md', 'w').write(gh_notes)
+          open('/tmp/ge_notes.md', 'w').write(ge_notes)
+          print("NAME=" + name)
+          PY
+
+      - name: 更新 GitHub FireflyMovie 发行版
         run: |
           set -e
           NAME=$(python3 -c "import json;print(json.load(open('apk/leanback.json'))['name'])")
           TAG="v$NAME"
-          echo "发布版本: $NAME -> 发行版 tag $TAG"
-          APKS=(leanback-arm64_v8a.apk leanback-armeabi_v7a.apk mobile-arm64_v8a.apk mobile-armeabi_v7a.apk)
-
+          echo "GitHub 发行版 tag: $TAG"
           if gh release view "$TAG" --repo DovisLiu/FireflyMovie >/dev/null 2>&1; then
-            echo "发行版 $TAG 已存在，追加/覆盖附件"
-            for f in "${APKS[@]}"; do
-              gh release upload "$TAG" "apk/$f" --repo DovisLiu/FireflyMovie --clobber
+            echo "已存在，删除旧 APK 附件并改写为链接说明"
+            for fn in leanback-arm64_v8a.apk leanback-armeabi_v7a.apk mobile-arm64_v8a.apk mobile-armeabi_v7a.apk; do
+              AID=$(gh release view "$TAG" --repo DovisLiu/FireflyMovie --json assets --jq ".assets[] | select(.name==\"$fn\") | .id" 2>/dev/null || true)
+              if [ -n "$AID" ]; then
+                gh api -X DELETE "repos/DovisLiu/FireflyMovie/releases/assets/$AID" >/dev/null 2>&1 || true
+                echo "  已删除附件 $fn"
+              fi
             done
+            gh release edit "$TAG" --repo DovisLiu/FireflyMovie --notes-file /tmp/gh_notes.md
           else
-            echo "创建发行版 $TAG 并上传附件"
-            gh release create "$TAG" --repo DovisLiu/FireflyMovie \
-              --title "$TAG" --notes "流萤影视 $TAG 发布" --target main \
-              "${APKS[@]/#/apk/}"
+            echo "创建发行版并写入链接说明"
+            gh release create "$TAG" --repo DovisLiu/FireflyMovie --title "$TAG" --notes-file /tmp/gh_notes.md --target main
           fi
           echo "GitHub 侧完成。"
+
+      - name: 更新 Gitee FireflyMovie 发行版
+        run: |
+          set -e
+          NAME=$(python3 -c "import json;print(json.load(open('apk/leanback.json'))['name'])")
+          TAG="v$NAME"
+          GE_NOTES=$(jq -Rs . /tmp/ge_notes.md)
+          echo "Gitee 发行版 tag: $TAG"
+          EXISTING=$(curl -s -H "Authorization: token $GITEE_TOKEN" "https://gitee.com/api/v5/repos/dovisliu/FireflyMovie/releases/tags/$TAG")
+          RID=$(echo "$EXISTING" | jq -r '.id // empty')
+          if [ -n "$RID" ]; then
+            echo "已存在（id=$RID），更新说明"
+            curl -s -X PATCH -H "Authorization: token $GITEE_TOKEN" -H "Content-Type: application/json" \
+              -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":$GE_NOTES,\"target_commitish\":\"main\"}" \
+              "https://gitee.com/api/v5/repos/dovisliu/FireflyMovie/releases/$RID" >/dev/null
+          else
+            echo "创建发行版并写入链接说明"
+            curl -s -X POST -H "Authorization: token $GITEE_TOKEN" -H "Content-Type: application/json" \
+              -d "{\"tag_name\":\"$TAG\",\"name\":\"$TAG\",\"body\":$GE_NOTES,\"target_commitish\":\"main\"}" \
+              "https://gitee.com/api/v5/repos/dovisliu/FireflyMovie/releases" >/dev/null
+          fi
+          echo "Gitee 侧完成。"
