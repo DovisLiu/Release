@@ -66,8 +66,13 @@ jobs:
             for fn in leanback-arm64_v8a.apk leanback-armeabi_v7a.apk mobile-arm64_v8a.apk mobile-armeabi_v7a.apk; do
               AID=$(gh release view "$TAG" --repo DovisLiu/FireflyMovie --json assets --jq ".assets[] | select(.name==\"$fn\") | .id" 2>/dev/null || true)
               if [ -n "$AID" ]; then
-                gh api -X DELETE "repos/DovisLiu/FireflyMovie/releases/assets/$AID" >/dev/null 2>&1 || true
-                echo "  已删除附件 $fn"
+                CODE=$(curl -s -o /tmp/del.json -w "%{http_code}" -X DELETE \
+                  -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/DovisLiu/FireflyMovie/releases/assets/$AID")
+                echo "  删除附件 $fn (id=$AID) -> HTTP $CODE"
+                if [ "$CODE" != "204" ] && [ "$CODE" != "200" ]; then
+                  echo "    ⚠️ 删除失败响应:"; head -c 300 /tmp/del.json; echo
+                fi
               fi
             done
             gh release edit "$TAG" --repo DovisLiu/FireflyMovie --notes-file /tmp/gh_notes.md
