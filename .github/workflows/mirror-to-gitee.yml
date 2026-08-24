@@ -1,4 +1,4 @@
-name: Mirror to Gitee
+name: Mirror to Gitee (latest only)
 
 on:
   push:
@@ -9,17 +9,34 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Mirror repository to Gitee via PAT
+      - name: Checkout GitHub Release (shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Push latest APK snapshot to Gitee (quota-safe)
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
           set -e
           REPO_NAME="${{ github.event.repository.name }}"
-          SRC="https://github.com/${{ github.repository }}.git"
           DST="https://dovisliu:${GITEE_TOKEN}@gitee.com/dovisliu/${REPO_NAME}.git"
-          echo "Mirroring: ${SRC} -> ${DST}"
-          rm -rf /tmp/mirror-repo
-          git clone --mirror "$SRC" /tmp/mirror-repo
-          cd /tmp/mirror-repo
-          git remote set-url --push origin "$DST"
-          git push --mirror
+
+          # 读取最新版本号（来自 JSON 的 name 字段，如 "1.0.3"）
+          V=$(python3 -c "import json; print(json.load(open('apk/leanback.json'))['name'])")
+          echo "Latest version: $V"
+
+          # 构建只含最新版 APK + JSON 的孤儿提交
+          # 关键：不累积历史，避免 Gitee 免费版 500MB 单仓上限被撞（旧 APK 永久累积会超限锁仓）
+          git checkout --orphan gitee-latest
+          git rm -rf --cached .
+          git add "apk/$V" apk/leanback.json apk/mobile.json
+          git commit -m "latest snapshot: $V"
+
+          # 强制推送（覆盖旧历史，旧 APK 对象不可达，由 Gitee GC 回收配额）
+          git push --force "$DST" gitee-latest:fireflymovie
+
+          # 清理 Gitee 旧 tag，释放配额
+          git ls-remote --tags "$DST" | awk '{print $2}' | sed 's#refs/tags/##' | while read t; do
+            git push "$DST" --delete "$t" || true
+          done
