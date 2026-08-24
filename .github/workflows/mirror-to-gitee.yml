@@ -26,6 +26,10 @@ jobs:
           V=$(python3 -c "import json; print(json.load(open('apk/leanback.json'))['name'])")
           echo "Latest version: $V"
 
+          # Actions 运行器默认无 git 身份，commit 前必须设置
+          git config user.email "bot@firefly.local"
+          git config user.name "Firefly Bot"
+
           # 构建只含最新版 APK + JSON 的孤儿提交
           # 关键：不累积历史，避免 Gitee 免费版 500MB 单仓上限被撞（旧 APK 永久累积会超限锁仓）
           git checkout --orphan gitee-latest
