@@ -9,10 +9,14 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout GitHub Release (shallow)
+      - name: Checkout GitHub Release (JSON only, sparse)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          sparse-checkout: |
+            apk/leanback.json
+            apk/mobile.json
+          sparse-checkout-cone-mode: false
 
       - name: Push latest APK snapshot to Gitee (quota-safe)
         env:
@@ -25,6 +29,9 @@ jobs:
           # 读取最新版本号（来自 JSON 的 name 字段，如 "1.0.3"）
           V=$(python3 -c "import json; print(json.load(open('apk/leanback.json'))['name'])")
           echo "Latest version: $V"
+
+          # 仅按需拉取最新版 APK 目录（避免下载全部历史版本，省时省带宽）
+          git sparse-checkout set --no-cone apk/leanback.json apk/mobile.json "apk/$V"
 
           # Actions 运行器默认无 git 身份，commit 前必须设置
           git config user.email "bot@firefly.local"
