@@ -2,6 +2,7 @@ name: Mirror to Gitee (latest only)
 
 on:
   push:
+    branches: [fireflymovie]
   delete:
   workflow_dispatch:
 
