@@ -1,0 +1,31 @@
+name: Mirror WX_Patch to Gitee
+
+# 只负责把 WX_Patch 分支同步到 Gitee，与 fireflymovie 分支的流萤影视同步完全隔离。
+# 说明：GitHub Actions 对 push 事件采用「被推送分支上的工作流文件」，本文件位于
+#       WX_Patch 分支，因此只会被 WX_Patch 分支的 push 触发，不会干扰流萤链路。
+on:
+  push:
+    branches: [WX_Patch]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout WX_Patch branch
+        uses: actions/checkout@v4
+        with:
+          ref: WX_Patch
+          fetch-depth: 0
+
+      - name: Push WX_Patch branch to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          set -e
+          DST="https://dovisliu:${GITEE_TOKEN}@gitee.com/dovisliu/Release.git"
+          git config user.email "bot@wxpatch.local"
+          git config user.name "WX_Patch Bot"
+          # 强推以保证 Gitee 与 GitHub 完全一致（本分支为纯镜像分支，无人直接提交）
+          git push --force "$DST" HEAD:refs/heads/WX_Patch
+          echo "WX_Patch 分支已同步至 Gitee"
