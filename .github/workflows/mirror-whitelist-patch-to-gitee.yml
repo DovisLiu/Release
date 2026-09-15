@@ -1,0 +1,31 @@
+name: Mirror Whitelist_Patch to Gitee
+
+# 只负责把 Whitelist_Patch 分支同步到 Gitee，与其它产品的同步链路完全隔离。
+# 说明：GitHub Actions 对 push 事件采用「被推送分支上的工作流文件」，本文件位于
+#       Whitelist_Patch 分支，因此只会被该分支的 push 触发。
+on:
+  push:
+    branches: [Whitelist_Patch]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Whitelist_Patch branch
+        uses: actions/checkout@v4
+        with:
+          ref: Whitelist_Patch
+          fetch-depth: 0
+
+      - name: Push Whitelist_Patch branch to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          set -e
+          DST="https://dovisliu:${GITEE_TOKEN}@gitee.com/dovisliu/Release.git"
+          git config user.email "bot@whitelistpatch.local"
+          git config user.name "Whitelist_Patch Bot"
+          # 强推以保证 Gitee 与 GitHub 完全一致（本分支为纯镜像分支，无人直接提交）
+          git push --force "$DST" HEAD:refs/heads/Whitelist_Patch
+          echo "Whitelist_Patch 分支已同步至 Gitee"
