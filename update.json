@@ -1,6 +1,6 @@
 {
-  "name": "1.0.2",
-  "file": "Whitelist_Patch_V1.0.2-Alpha.exe",
-  "desc": "修复日志记录，新增工具自更新功能。",
-  "code": 102
+  "name": "1.1.0",
+  "file": "Whitelist_Patch_V1.1.0-Alpha.exe",
+  "desc": "新增对Windows Installer管理的软件修复功能。",
+  "code": 110
 }
