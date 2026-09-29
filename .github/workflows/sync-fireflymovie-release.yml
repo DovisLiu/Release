@@ -3,9 +3,10 @@ name: Sync Release Notes to FireflyMovie
 # 单一真相源方案（链接型）：Release 仓库的 apk/ 是唯一真相源。
 # 每次把新 APK 推到本仓库（fireflymovie 分支）即触发本工作流。
 # 不再上传 350MB 的 APK 附件（避免跨境传输），改为：
-#   - GitHub 侧：用 FIREFLY_PAT 更新 DovisLiu/FireflyMovie 发行版说明（仅含 github.com 绝对下载链接）
-#   - Gitee  侧：用 GITEE_TOKEN  更新 dovisliu/FireflyMovie 发行版说明（仅含 gitee.com  绝对下载链接）
-# 两侧链接各自指向自家 Release 仓库的 apk/ 目录，互不串台。
+#   - GitHub 侧：用 FIREFLY_PAT 更新 DovisLiu/FireflyMovie 发行版说明（github.com 绝对下载链接）
+#   - Gitee  侧：用 GITEE_TOKEN  更新 dovisliu/FireflyMovie 发行版说明（同样指向 GitHub 下载链接）
+# 自 2026-09-29 起 APK 统一只走 GitHub 下载（实测 Gitee 匿名拉大文件 403，APP 无登录环节无法使用）；
+# Gitee 仅保留版本检测 JSON 兜底（mirror-to-gitee.yml 只推 JSON，不推 APK）。
 on:
   push:
     paths:
@@ -17,7 +18,7 @@ permissions:
 
 jobs:
   sync:
-    name: 更新 GitHub / Gitee FireflyMovie 发行版（仅链接）
+    name: 更新 GitHub / Gitee FireflyMovie 发行版（链接指向 GitHub）
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.FIREFLY_PAT }}
@@ -36,7 +37,6 @@ jobs:
           name = d['name']
           desc = d.get('desc', '')
           gh_base = f"https://github.com/DovisLiu/Release/raw/fireflymovie/apk/{name}"
-          ge_base = f"https://gitee.com/dovisliu/Release/raw/fireflymovie/apk/{name}"
           apks = [
               ("电视版 64 位", "leanback-arm64_v8a.apk"),
               ("电视版 32 位", "leanback-armeabi_v7a.apk"),
@@ -50,10 +50,9 @@ jobs:
               rows = "\n".join(f"| {label} | [{fn}]({base}/{fn}) |" for label, fn in apks)
               return f"| 版本 | 下载链接 |\n|------|----------|\n{rows}"
 
-          gh_notes = f"流萤影视 v{name}\n\n{desc}\n\n## 下载（GitHub 网络）\n\n{table(gh_base)}\n\n各链接指向 GitHub 的 Release 仓库，请直接点击下载。"
-          ge_notes = f"流萤影视 v{name}\n\n{desc}\n\n## 下载（Gitee 网络）\n\n{table(ge_base)}\n\n各链接指向 Gitee 的 Release 仓库，请直接点击下载。"
-          open('/tmp/gh_notes.md', 'w').write(gh_notes)
-          open('/tmp/ge_notes.md', 'w').write(ge_notes)
+          # 两侧共用同一份说明：下载统一走 GitHub（Gitee 匿名拉大文件 403，不再提供 APK 下载）
+          notes = f"流萤影视 v{name}\n\n{desc}\n\n## 下载（GitHub）\n\n{table(gh_base)}\n\n各链接指向 GitHub 的 Release 仓库，请直接点击下载。"
+          open('/tmp/gh_notes.md', 'w').write(notes)
           print("NAME=" + name)
           PY
 
@@ -80,12 +79,12 @@ jobs:
           fi
           echo "GitHub 侧完成。"
 
-      - name: 更新 Gitee FireflyMovie 发行版
+      - name: 更新 Gitee FireflyMovie 发行版（指向 GitHub 下载）
         run: |
           set -e
           NAME=$(python3 -c "import json;print(json.load(open('apk/leanback.json'))['name'])")
           TAG="v$NAME"
-          GE_NOTES=$(jq -Rs . /tmp/ge_notes.md)
+          GE_NOTES=$(jq -Rs . /tmp/gh_notes.md)
           echo "Gitee 发行版 tag: $TAG"
           EXISTING=$(curl -s -H "Authorization: token $GITEE_TOKEN" "https://gitee.com/api/v5/repos/dovisliu/FireflyMovie/releases/tags/$TAG")
           RID=$(echo "$EXISTING" | jq -r '.id // empty')
