@@ -31,7 +31,7 @@ jobs:
         run: |
           set -e
           python3 - <<'PY'
-          import json
+          import json, os
           d = json.load(open('apk/leanback.json'))
           name = d['name']
           desc = d.get('desc', '')
@@ -43,6 +43,8 @@ jobs:
               ("手机版 64 位", "mobile-arm64_v8a.apk"),
               ("手机版 32 位", "mobile-armeabi_v7a.apk"),
           ]
+          # 只列实际存在的 APK 文件，避免出现死链
+          apks = [(label, fn) for label, fn in apks if os.path.exists(f"apk/{name}/{fn}")]
 
           def table(base):
               rows = "\n".join(f"| {label} | [{fn}]({base}/{fn}) |" for label, fn in apks)
