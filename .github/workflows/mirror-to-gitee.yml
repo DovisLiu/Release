@@ -32,7 +32,7 @@ jobs:
           # 构建只含版本检测 JSON 的孤儿提交（不推任何 APK）
           git checkout --orphan gitee-latest
           git rm -rf --cached .
-          git add apk/leanback.json apk/mobile.json
+          git add apk/leanback.json apk/mobile.json apk/notice.json
           git commit -m "update json sync (json only, no apk)"
 
           # 强制推送（覆盖旧历史，旧 APK 对象不可达，由 Gitee GC 回收配额）
