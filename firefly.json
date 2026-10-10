@@ -1,0 +1,18 @@
+{
+  "urls": [
+    { "name": "饭太硬",   "url": "http://www.饭太硬.net/tv" },
+    { "name": "肥猫",     "url": "http://肥猫.net/tv" },
+    { "name": "牛二",     "url": "https://9280.kstore.vip/newwex.json" },
+    { "name": "俊哥",     "url": "http://home.jundie.top:81/top98.json" },
+    { "name": "潇洒",     "url": "https://qist.wyfc.qzz.io/xiaosa/api.json" },
+    { "name": "游魂",     "url": "https://www.iyouhun.com/tv/wex" },
+    { "name": "小盒子4K", "url": "http://xhztv.top/4k.json" },
+    { "name": "二月红",   "url": "https://700sjro44343.vicp.fun/eggp/0211/tv.json" },
+    { "name": "少儿频道", "url": "https://jihulab.com/ymz1231/xymz/-/raw/main/ymshaoer" },
+    { "name": "欧歌",     "url": "https://play.iptv365.org/%E6%AC%A7%E6%AD%8C/api.json" },
+    { "name": "jsm",      "url": "https://g.33445500.xyz/https://raw.githubusercontent.com/qist/tvbox/refs/heads/master/jsm.json" },
+    { "name": "ygbox",    "url": "https://ghproxy.net/https://raw.githubusercontent.com/guot55/yg/refs/heads/main/ygbox.json" },
+    { "name": "台版tw",   "url": "https://ghproxy.net/https://raw.githubusercontent.com/vcloudc/tvbox/main/tw/api.json" },
+    { "name": "盒子迷",   "url": "https://盒子迷.top/禁止贩卖" }
+  ]
+}
