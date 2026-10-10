@@ -1,1 +1,10 @@
-{"stage":0,"title":"","message":"","buttonText":"","cancelText":"","flowUrl":"","flowApkUrl":"","flowMobileUrl":""}
+{
+  "stage": 1,
+  "title": "流萤影视升级通知",
+  "message": "「流萤影视」已全新升级为「流萤」，功能与体验全面优化。建议您前往下载新版继续使用，旧版数据可在设置中备份后迁移到新应用。",
+  "buttonText": "前往下载",
+  "cancelText": "下次再说",
+  "flowUrl": "https://download.dovisliu.cn/firefly/",
+  "flowApkUrl": "",
+  "flowMobileUrl": ""
+}
