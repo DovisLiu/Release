@@ -1,6 +1,7 @@
 {
-  "name": "1.1.0",
-  "file": "Whitelist_Patch_V1.1.0-Alpha.exe",
-  "desc": "新增对Windows Installer管理的软件修复功能。",
-  "code": 110
+  "name": "1.2.0",
+  "file": "Whitelist_Patch_V1.2.0-Alpha.exe",
+  "desc": "加强白名单扫描，优化自更新功能。",
+  "code": 120,
+  "force": false
 }
