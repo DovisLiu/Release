@@ -1,11 +1,15 @@
 {
-  "enabled": false,
-  "id": "disclaimer-20261126",
+  "enabled": true,
+  "id": "disclaimer-20261127v3",
   "title": "重要声明",
-  "body": "WX 下载修复工具为个人非商业公益项目，与腾讯及微信官方无关。\n本工具按“现状”提供，不保证完全无误，使用风险由您自行承担。\n如不接受上述声明，请点击「退出程序」关闭应用。",
-  "mode": "forced",
-  "mandatory": true,
+  "body": "本工具用于修复内网环境下的WX下载功能，仅供技术研究使用。\n使用本工具带来的风险由使用者自行承担，开发者不对使用本工具造成的任何结果承担责任。\n点击「同意」视为同意接受本声明并继续使用，点击「不同意」将退出程序。",
+  "mode": "once_per_version",
+  "mandatory": false,
   "countdown": 0,
+  "buttons": [
+    {"text": "不同意", "action": "exit"},
+    {"text": "同意", "action": "close"}
+  ],
   "min_version": "1.5.0",
   "link_text": "",
   "link_url": ""
