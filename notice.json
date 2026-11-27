@@ -1,0 +1,12 @@
+{
+  "id": "2026-11-26-welcome",
+  "enabled": false,
+  "mode": "once_per_version",
+  "mandatory": false,
+  "countdown": 0,
+  "min_version": "1.2.0",
+  "title": "使用提示",
+  "body": "本工具用于修复安装范围。修复前会自动完整备份，可在「修复历史」中随时还原。",
+  "link_text": "了解更多",
+  "link_url": "https://www.DovisLiu.cn"
+}
