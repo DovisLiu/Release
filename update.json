@@ -1,7 +1,7 @@
 {
-  "name": "1.2.0",
-  "file": "Whitelist_Patch_V1.2.0-Alpha.exe",
-  "desc": "加强白名单扫描，优化自更新功能。",
-  "code": 120,
+  "name": "1.2.1",
+  "file": "Whitelist_Patch_V1.2.1-Alpha.exe",
+  "desc": "优化安装日期检测，新增排序功能。",
+  "code": 121,
   "force": false
 }
